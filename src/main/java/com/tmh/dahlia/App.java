@@ -4,10 +4,7 @@ import com.tmh.dahlia.ui.*;
 import javafx.application.Application;
 import javafx.geometry.Insets;
 import javafx.scene.Scene;
-import javafx.scene.layout.Background;
-import javafx.scene.layout.BackgroundFill;
-import javafx.scene.layout.CornerRadii;
-import javafx.scene.layout.VBox;
+import javafx.scene.layout.*;
 import javafx.scene.paint.Color;
 import javafx.stage.Stage;
 
@@ -26,15 +23,26 @@ public class App extends Application {
         @Override
     public void start(Stage stage) {
 
+        ButtonRow buttonRow = new ButtonRow();
+        BlockPushButton startStopButton = new BlockPushButton(
+                new BlockPushButton.State("Start", Color.WHITE, Color.web("#04a777")),
+                new BlockPushButton.State("Stop", Color.WHITE, Color.web("#d90368")));
+        TaskSyncButton exportButton = new TaskSyncButton("Export", Color.WHITE, Color.web("#0353a4"));
+        HBox.setMargin(exportButton, new Insets(0, 0, 0, 5));
+        buttonRow.getChildren().addAll(startStopButton, exportButton);
+
         InfoGroup stockprice = new InfoGroup("Stockprice");
         stockprice.getChildren().addAll(timeRow, priceRow, incDecRow, largestQtyRow, largestQtyPriceRow, largestQtyBuySell);
 
         VBox mainLayout = new VBox();
-        mainLayout.getChildren().addAll(stockprice);
+        mainLayout.getChildren().addAll(buttonRow, stockprice);
         mainLayout.setBackground(new Background(new BackgroundFill(Color.WHITE, CornerRadii.EMPTY, Insets.EMPTY)));
-        var scene = new Scene(mainLayout, 300, 300);
+        mainLayout.setPadding(new Insets(10, 0, 10, 0));
 
+        var scene = new Scene(mainLayout, 300, 350);
         stage.setScene(scene);
+        stage.setResizable(false);
+        stage.setTitle("Dahlia");
         stage.show();
     }
 
