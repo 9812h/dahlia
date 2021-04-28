@@ -15,9 +15,7 @@ public class SessionTimer {
 		HALF_PERIODIC_CHECK
 	}
 
-	public interface EventListener {
-		void work();
-	}
+	public interface EventListener { void work(); }
 
 	private static final LocalTime FIRST_HALF_BEGINNING = LocalTime.of(9, 0, 0, 0);
 	private static final LocalTime FIRST_HALF_ENDING = LocalTime.of(11, 30, 0, 0);
@@ -64,7 +62,10 @@ public class SessionTimer {
 	}
 
 	private void triggerListenerCallbacks(EventType eventType) {
-		for (EventListener listener : eventListeners.get(eventType)) listener.work();
+		for (EventListener listener : eventListeners.get(eventType)) {
+			Thread t = new Thread(() -> listener.work(), "");
+			t.start();
+		};
 	}
 
 	private void halfStartTimerCb() {

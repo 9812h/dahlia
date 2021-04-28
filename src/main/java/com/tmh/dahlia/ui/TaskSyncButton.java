@@ -17,4 +17,12 @@ public class TaskSyncButton extends Button {
         setBackground(new Background(new BackgroundFill(bg, new CornerRadii(4), Insets.EMPTY)));
         setTextFill(fg);
     }
+
+    public void disable() {
+        setDisable(true);
+    }
+
+    public void enable() {
+        setDisable(false);
+    }
 }

@@ -17,6 +17,6 @@ public class InfoGroup extends VBox {
 
         setPadding(new Insets(20, 10, 20, 10));
         VBox.setMargin(this, new Insets(10, 10, 10, 10));
-        setBorder(new Border(new BorderStroke(Color.LIGHTGRAY, BorderStrokeStyle.SOLID, new CornerRadii(4), new BorderWidths(1))));
+        setBorder(new Border(new BorderStroke(Color.web("#d0d0d0"), BorderStrokeStyle.SOLID, new CornerRadii(4), new BorderWidths(1))));
     }
 }
