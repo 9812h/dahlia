@@ -1,15 +1,23 @@
 package com.tmh.dahlia;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
 import java.util.*;
 import java.time.LocalDateTime;
 import java.time.DayOfWeek;
 import java.time.LocalTime;
 import java.time.Duration;
 
+
 public class SessionTimer {
+
+	private static final Logger LOGGER = LogManager.getLogger(SessionTimer.class);
+
 	public enum EventType {
 		TIMER_STARTED, TIMER_STOPPED,
 		SESSION_START, SESSION_FINISH,
+		HALF_START, HALF_FINISH,
 		FIRST_HALF_START, FIRST_HALF_FINISH,
 		SECOND_HALF_START, SECOND_HALF_FINISH,
 		HALF_PERIODIC_CHECK
@@ -22,7 +30,7 @@ public class SessionTimer {
 	private static final LocalTime SECOND_HALF_BEGINNING = LocalTime.of(13, 0, 0, 0);
 	private static final LocalTime SECOND_HALF_ENDING = LocalTime.of(14, 45, 0, 0);
 	private static final long MILLIS_PER_DAY = 24 * 60 * 60 * 1000;
-	private static final long PERIODIC_TIMER_DELAY = 5000;
+	private static final long PERIODIC_TIMER_DELAY = 100000;
 	
 	private Timer sessionEventTimer;
 	private Timer periodicTimer;
@@ -34,6 +42,7 @@ public class SessionTimer {
 	}
 
 	public void start() {
+		LOGGER.debug("Starting ...");
 		sessionEventTimer = new Timer();
 		sessionEventTimer.schedule(new TimerTask() {
 			@Override
@@ -69,6 +78,7 @@ public class SessionTimer {
 	}
 
 	private void halfStartTimerCb() {
+		triggerListenerCallbacks(EventType.HALF_START);
 		int checkFirstHalfResult = checkFirstHalf(LocalDateTime.now().toLocalTime());
 		if (checkFirstHalfResult == 0) { // first half
 			sessionEventTimer.schedule(new TimerTask() {
@@ -95,10 +105,11 @@ public class SessionTimer {
 			public void run() {
 				periodicTimerCb();
 			}
-		}, PERIODIC_TIMER_DELAY);
+		}, 0, PERIODIC_TIMER_DELAY);
 	}
 
 	private void halfEndTimerCb() {
+		triggerListenerCallbacks(EventType.HALF_FINISH);
 		if (periodicTimer != null) {
 			periodicTimer.cancel();
 		}

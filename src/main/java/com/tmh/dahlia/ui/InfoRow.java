@@ -1,5 +1,6 @@
 package com.tmh.dahlia.ui;
 
+import javafx.application.Platform;
 import javafx.scene.control.Label;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Pane;
@@ -17,6 +18,6 @@ public class InfoRow extends Row {
     }
 
     public void setValue(String value) {
-        valueLabel.setText(value);
+        Platform.runLater(() -> valueLabel.setText(value));
     }
 }

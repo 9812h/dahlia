@@ -2,47 +2,52 @@ package com.tmh.dahlia;
 
 import com.tmh.dahlia.ui.*;
 import javafx.application.Application;
+import javafx.event.EventHandler;
 import javafx.geometry.Insets;
 import javafx.scene.Scene;
 import javafx.scene.layout.*;
 import javafx.scene.paint.Color;
 import javafx.stage.Stage;
+
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import org.openqa.selenium.By;
 import org.openqa.selenium.WebDriver;
+import org.openqa.selenium.WebElement;
 import org.openqa.selenium.chrome.ChromeDriver;
+import org.openqa.selenium.chrome.ChromeOptions;
+import org.openqa.selenium.support.ui.ExpectedConditions;
+import org.openqa.selenium.support.ui.WebDriverWait;
 
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 
 public class App extends Application {
-
     private final static String DEFAULT_INFO_ROW_VALUE = "NA";
 
-    private final ArrayList<ArrayList<Object>> data = new ArrayList<>();
+    private static final Logger LOGGER = LogManager.getLogger(App.class);
 
     private final InfoRow
-        timeRow = new InfoRow("Time", DEFAULT_INFO_ROW_VALUE),
+        timeRow = new InfoRow("Update time", DEFAULT_INFO_ROW_VALUE),
         priceRow = new InfoRow("Price", DEFAULT_INFO_ROW_VALUE),
         incDecRow = new InfoRow("+/-", DEFAULT_INFO_ROW_VALUE),
         largestQtyRow = new InfoRow("Largest qty.", DEFAULT_INFO_ROW_VALUE),
         largestQtyPriceRow = new InfoRow("Largest qty. price", DEFAULT_INFO_ROW_VALUE),
         largestQtyBuySell = new InfoRow("Largest qty. buy/sell", DEFAULT_INFO_ROW_VALUE);
-
     private final BlockPushButton startStopButton = new BlockPushButton(
             new BlockPushButton.Profile("Stop", Color.WHITE, Color.web("#d90368")),
             new BlockPushButton.Profile("Start", Color.WHITE, Color.web("#04a777")));
-
     private final StatusBar statusBar = new StatusBar();
-
     private final TaskSyncButton exportButton = new TaskSyncButton("Export", Color.WHITE, Color.web("#0353a4"));
 
     private final SessionTimer sessionTimer = new SessionTimer();
-
     private WebDriver webDriver;
 
     @Override
     public void start(Stage stage) {
-        System.setProperty("webdriver.chrome.driver", "C:/Users/tmh/Downloads/chromedriver_win32/chromedriver.exe");
+        stage.setOnCloseRequest(windowEvent -> System.exit(0));
         buildUi(stage);
-        addActions();
     }
 
     public static void main(String[] args) {
@@ -72,33 +77,5 @@ public class App extends Application {
         stage.show();
     }
 
-    private void addActions() {
-
-        exportButton.disable();
-
-        startStopButton.addEventListener(BlockPushButton.EventType.ON, () -> {
-            statusBar.setContent("ON");
-            sessionTimer.start();
-            exportButton.enable();
-        });
-
-        startStopButton.addEventListener(BlockPushButton.EventType.OFF, () -> {
-            statusBar.setContent("OFF");
-            sessionTimer.stop();
-            exportButton.disable();
-        });
-
-        sessionTimer.addEventListener(SessionTimer.EventType.TIMER_STARTED, () -> {
-            webDriver = new ChromeDriver();
-            webDriver.get("http://stockprice.vn/a/mix.html");
-        });
-
-        sessionTimer.addEventListener(SessionTimer.EventType.TIMER_STOPPED, new SessionTimer.EventListener() {
-            @Override
-            public void work() {
-                webDriver.close();
-            }
-        });
-    }
 
 }
