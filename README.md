@@ -1,10 +1,14 @@
 # dahlia
+0. Requirements
+- JDK 16
+- JavaFX 16
+- Maven
 
-1. Run
+1. Run project
 ```
 mvn clean javafx:run
 ```
-2. Build
+2. Build executable `.jar` file
 ```
 mvn clean package
 ```
