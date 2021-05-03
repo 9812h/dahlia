@@ -12,7 +12,7 @@ mvn clean javafx:run
 ```
 mvn clean package
 ```
-Output file is in folder `shade`.
+This will generate an executable `.jar` file and place it into folder `shade`.
 
 3. Notice
 - Place Chrome driver into folder `drivers` (this folder is in the same folder with `.jar` file) and rename it to `chromedriver.exe` (for Windows).
