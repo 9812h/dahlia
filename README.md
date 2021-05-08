@@ -1,7 +1,6 @@
 # dahlia
 0. Requirements
 - JDK 16
-- JavaFX 16
 - Maven
 
 1. Run project
