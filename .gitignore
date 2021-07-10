@@ -28,4 +28,4 @@ target/
 drivers/
 logs/
 shade/
-.settings
+settings
