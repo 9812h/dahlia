@@ -1,48 +1,40 @@
 package com.tmh.dahlia;
 
-import com.tmh.dahlia.ui.*;
 import javafx.application.Application;
-import javafx.event.EventHandler;
-import javafx.geometry.Insets;
+import javafx.scene.Node;
 import javafx.scene.Scene;
+import javafx.scene.control.Button;
+import javafx.scene.control.Label;
+import javafx.scene.control.TextField;
 import javafx.scene.layout.*;
-import javafx.scene.paint.Color;
+import javafx.stage.FileChooser;
 import javafx.stage.Stage;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.openqa.selenium.By;
 import org.openqa.selenium.WebDriver;
-import org.openqa.selenium.WebElement;
-import org.openqa.selenium.chrome.ChromeDriver;
-import org.openqa.selenium.chrome.ChromeOptions;
-import org.openqa.selenium.support.ui.ExpectedConditions;
-import org.openqa.selenium.support.ui.WebDriverWait;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
+import java.io.File;
+import java.util.HashMap;
+import java.util.Scanner;
+import java.util.Set;
 
 public class App extends Application {
     private final static String DEFAULT_INFO_ROW_VALUE = "NA";
 
     private static final Logger LOGGER = LogManager.getLogger(App.class);
 
-    private final InfoRow
-        timeRow = new InfoRow("Update time", DEFAULT_INFO_ROW_VALUE),
-        priceRow = new InfoRow("Price", DEFAULT_INFO_ROW_VALUE),
-        incDecRow = new InfoRow("+/-", DEFAULT_INFO_ROW_VALUE),
-        largestQtyRow = new InfoRow("Largest qty.", DEFAULT_INFO_ROW_VALUE),
-        largestQtyPriceRow = new InfoRow("Largest qty. price", DEFAULT_INFO_ROW_VALUE),
-        largestQtyBuySell = new InfoRow("Largest qty. buy/sell", DEFAULT_INFO_ROW_VALUE);
-    private final BlockPushButton startStopButton = new BlockPushButton(
-            new BlockPushButton.Profile("Stop", Color.WHITE, Color.web("#d90368")),
-            new BlockPushButton.Profile("Start", Color.WHITE, Color.web("#04a777")));
-    private final StatusBar statusBar = new StatusBar();
-    private final TaskSyncButton exportButton = new TaskSyncButton("Export", Color.WHITE, Color.web("#0353a4"));
-
     private final SessionTimer sessionTimer = new SessionTimer();
     private WebDriver webDriver;
+
+    private enum SettingKeys {
+        DRIVER_PATH,
+        UPDATE_TIME
+    }
+
+    private HashMap<SettingKeys, Object> settings;
+
+    private Scene mainScene;
 
     @Override
     public void start(Stage stage) {
@@ -55,26 +47,93 @@ public class App extends Application {
     }
 
     private void buildUi(Stage stage) {
-        ButtonRow buttonRow = new ButtonRow();
-        HBox.setMargin(exportButton, new Insets(0, 0, 0, 5));
-        buttonRow.getChildren().addAll(startStopButton, exportButton);
+        readSettings();
+        mainScene = generateMainScene(stage);
 
-        InfoGroup stockprice = new InfoGroup("Stockprice");
-        stockprice.getChildren().addAll(timeRow, priceRow, incDecRow, largestQtyRow, largestQtyPriceRow, largestQtyBuySell);
+        stage.setScene(mainScene);
+        stage.setResizable(false);
+        stage.setTitle("STOCK");
+        stage.show();
+    }
+
+    private void readSettings() {
+        settings = new HashMap<>();
+        try {
+            Scanner scanner = new Scanner(new File("settings"));
+            String driverPath = scanner.nextLine();
+            String updateTime = scanner.nextLine();
+            settings.put(SettingKeys.DRIVER_PATH, driverPath);
+            settings.put(SettingKeys.UPDATE_TIME, Integer.valueOf(updateTime));
+        } catch (Exception e) {
+            settings.put(SettingKeys.DRIVER_PATH, "chromedriver");
+            settings.put(SettingKeys.UPDATE_TIME, 5000);
+        }
+    }
+
+    private void writeSettings() {
+
+    }
+
+    private Scene generateMainScene(Stage stage) {
+        VBox mainLayout = new VBox();
+        Button buttonSettings = new Button("Settings");
+        buttonSettings.setOnMouseClicked((Event) -> {
+            stage.setScene(generateSettingsScene(stage));
+        });
+        mainLayout.getChildren().addAll(buttonSettings);
+
+        return new Scene(mainLayout, 100, 100);
+    }
+
+    private Scene generateSettingsScene(Stage stage) {
+
+        VBox mainLayout = new VBox();
+
+        FileChooser fileChooser = new FileChooser();
+        fileChooser.setTitle("Browsing Chrome driver");
+
+        Label labelDriverPath = new Label((String) settings.get(SettingKeys.DRIVER_PATH));
+        Button buttonBrowseDriver = new Button("Browse");
+
+        buttonBrowseDriver.setOnMouseClicked((Event) -> {
+            File driver = fileChooser.showOpenDialog(stage);
+            if (driver != null) {
+                labelDriverPath.setText(driver.getAbsolutePath());
+            }
+        });
+
+        TextField textFieldUpdateTime = new TextField();
+        textFieldUpdateTime.setText(((Integer) settings.get(SettingKeys.UPDATE_TIME)).toString());
+
+        Node chromeDriverRow = generateSettingRow("Chrome driver", new Node[]{labelDriverPath, buttonBrowseDriver});
+        Node updateTimeRow = generateSettingRow("Update time (in sec)", new Node[]{textFieldUpdateTime});
 
         Pane spacer = new Pane();
         VBox.setVgrow(spacer, Priority.ALWAYS);
 
-        VBox mainLayout = new VBox();
-        mainLayout.getChildren().addAll(buttonRow, stockprice, spacer, statusBar);
-        mainLayout.setBackground(new Background(new BackgroundFill(Color.WHITE, CornerRadii.EMPTY, Insets.EMPTY)));
-        mainLayout.setPadding(new Insets(10, 0, 10, 0));
+        HBox actionRow = new HBox();
+        Button buttonCancel = new Button("Cancel");
+        buttonCancel.setOnMouseClicked((Event) -> {stage.setScene(mainScene);});
+        Button buttonOK = new Button("OK");
+        buttonOK.setOnMouseClicked((Event) -> {
+            writeSettings();
+            stage.setScene(mainScene);
+        });
+        actionRow.getChildren().addAll(buttonCancel, buttonOK);
 
-        var scene = new Scene(mainLayout, 300, 350);
-        stage.setScene(scene);
-        stage.setResizable(false);
-        stage.setTitle("Dahlia");
-        stage.show();
+        mainLayout.getChildren().addAll(chromeDriverRow, updateTimeRow, spacer, actionRow);
+
+        return new Scene(mainLayout, 450, 300);
+    }
+
+    private Node generateSettingRow(String text, Node[] controls) {
+        HBox row = new HBox();
+        Label label = new Label(text);
+        Pane spacer = new Pane();
+        HBox.setHgrow(spacer, Priority.ALWAYS);
+        row.getChildren().addAll(label, spacer);
+        for (Node control : controls) { row.getChildren().add(control); }
+        return row;
     }
 
 
