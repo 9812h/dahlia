@@ -30,19 +30,21 @@ public class SessionTimer {
 	private static final LocalTime SECOND_HALF_BEGINNING = LocalTime.of(13, 0, 0, 0);
 	private static final LocalTime SECOND_HALF_ENDING = LocalTime.of(14, 45, 0, 0);
 	private static final long MILLIS_PER_DAY = 24 * 60 * 60 * 1000;
-	private static final long PERIODIC_TIMER_DELAY = 100000;
+//	private static final long DEFAULT_PERIODIC_TIMER_DELAY = 10000; // 10s
 	
 	private Timer sessionEventTimer;
 	private Timer periodicTimer;
+	private long periodicTimerDelay = 10_000;
 
 	private final Map<EventType, HashSet<EventListener>> eventListeners = new HashMap<>();
 
-	SessionTimer() {
+	SessionTimer(long timeInSecs) {
+		this.periodicTimerDelay = timeInSecs;
 		for (EventType event : EventType.class.getEnumConstants()) eventListeners.put(event, new HashSet<>());
 	}
 
 	public void start() {
-		LOGGER.debug("Starting ...");
+		LOGGER.debug("Start");
 		sessionEventTimer = new Timer();
 		sessionEventTimer.schedule(new TimerTask() {
 			@Override
@@ -55,9 +57,11 @@ public class SessionTimer {
 	}
 	
 	public void stop() {
+		LOGGER.debug("Stop");
 		sessionEventTimer.cancel();
 		if (periodicTimer != null) {
 			periodicTimer.cancel();
+			periodicTimer = null;
 		}
 		triggerListenerCallbacks(EventType.TIMER_STOPPED);
 	}
@@ -68,6 +72,10 @@ public class SessionTimer {
 
 	public void removeEventListener(EventType eventType, EventListener listener) {
 		eventListeners.get(eventType).remove(listener);
+	}
+
+	public void updatePeriodicTimerDelay(long TimeInMs) {
+		periodicTimerDelay = TimeInMs;
 	}
 
 	private void triggerListenerCallbacks(EventType eventType) {
@@ -105,13 +113,14 @@ public class SessionTimer {
 			public void run() {
 				periodicTimerCb();
 			}
-		}, 0, PERIODIC_TIMER_DELAY);
+		}, periodicTimerDelay);
 	}
 
 	private void halfEndTimerCb() {
 		triggerListenerCallbacks(EventType.HALF_FINISH);
 		if (periodicTimer != null) {
 			periodicTimer.cancel();
+			periodicTimer = null;
 		}
 
 		sessionEventTimer.schedule(new TimerTask() {
@@ -136,10 +145,8 @@ public class SessionTimer {
 			public void run() {
 				periodicTimerCb();
 			}
-		}, PERIODIC_TIMER_DELAY);
-
+		}, periodicTimerDelay);
 		triggerListenerCallbacks(EventType.HALF_PERIODIC_CHECK);
-
 	}
 
 	private static long getNextHalfBeginningDuration(LocalDateTime dateTime) {
