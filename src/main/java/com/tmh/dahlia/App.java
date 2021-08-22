@@ -1,5 +1,8 @@
 package com.tmh.dahlia;
 
+import com.github.plushaze.traynotification.animations.Animations;
+import com.github.plushaze.traynotification.notification.Notifications;
+import com.github.plushaze.traynotification.notification.TrayNotification;
 import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.scene.Node;
@@ -18,6 +21,7 @@ import org.openqa.selenium.By;
 import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.WebElement;
 import org.openqa.selenium.chrome.ChromeDriver;
+import org.openqa.selenium.chrome.ChromeOptions;
 import org.openqa.selenium.support.ui.ExpectedCondition;
 import org.openqa.selenium.support.ui.ExpectedConditions;
 import org.openqa.selenium.support.ui.WebDriverWait;
@@ -31,6 +35,8 @@ import java.util.*;
 public class App extends Application {
     private static long SCENE_HEIGHT = 300;
     private static long SCENE_WIDTH  = 450;
+
+    private static int DEFAULT_START_NUM = 0;
 
     private static final Logger LOGGER = LogManager.getLogger(App.class);
 
@@ -46,11 +52,11 @@ public class App extends Application {
 
     private Scene mainScene;
 
-    private final ArrayList<ArrayList<String>> sessionData = new ArrayList<>();
-    private final ArrayList<Object> largetQttyData = new ArrayList<>();
+    private final ArrayList<RowData> sessionData = new ArrayList<>();
+    private RowData largestQttyData = null;
 
     private boolean periodCheckFlag = true;
-    private int latestNum = 0;
+    private int latestNum = DEFAULT_START_NUM;
 
     @Override
     public void start(Stage stage) {
@@ -74,11 +80,55 @@ public class App extends Application {
                     String historyTbXpath = "//table[contains(@class,'SPTable') and contains(@id,'tblDealHist')]";
                     int currentNum = Integer.parseInt(webDriver.findElement(By.xpath(historyTbXpath + "//tr[1]//td[1]")).getText());
 
+                    LOGGER.debug("New row(s): " + (currentNum - latestNum));
+                    boolean foundLargestQtty = false;
                     for (int i = 1; i <= currentNum - latestNum; ++i) {
+                        String baseXpath = historyTbXpath + "//tr[" + i + "]";
+                        Integer num = Integer.parseInt(webDriver.findElement(By.xpath(baseXpath + "//td[1]")).getText());
+                        String time = webDriver.findElement(By.xpath(baseXpath + "//td[2]")).getText();
+                        Float price = Float.parseFloat(webDriver.findElement(By.xpath(baseXpath + "//td[3]")).getText()
+                                .replace(".", "").replace(",", "."));
+                        Float change = Float.parseFloat(webDriver.findElement(By.xpath(baseXpath + "//td[4]")).getText()
+                                .replace(".", "").replace(",", "."));
+                        Float qtty = Float.parseFloat(webDriver.findElement(By.xpath(baseXpath + "//td[5]")).getText()
+                                .replace(".", "").replace(",", "."));
+                        String BorS = webDriver.findElement(By.xpath(baseXpath + "//td[6]")).getText();
+                        RowData currentRowData = new RowData(num, time, price, change, qtty, BorS);
+                        sessionData.add(currentRowData);
+
+                        if (num > 3) {
+                            if (largestQttyData == null) {
+                                largestQttyData = currentRowData;
+                                foundLargestQtty = true;
+                            } else {
+                                if (qtty >= largestQttyData.getQtty()) {
+                                    largestQttyData = currentRowData;
+                                    foundLargestQtty = true;
+                                }
+                            }
+                        }
+
+                        LOGGER.debug("currentRowData:");
+                        LOGGER.debug(currentRowData);
+                        LOGGER.debug("largestQttyData:");
+                        LOGGER.debug(largestQttyData);
+                        LOGGER.debug("foundLargestQtty:");
+                        LOGGER.debug(foundLargestQtty);
+                    }
+                    latestNum = currentNum;
+
+                    if (foundLargestQtty) {
+                        Platform.runLater(() -> {
+                            TrayNotification notification = new TrayNotification(
+                                    "Largest qtty: " + largestQttyData.getQtty(),
+                                    largestQttyData.getNotifString(),
+                                    Notifications.NOTICE);
+                            notification.setAnimation(Animations.POPUP);
+                            notification.showAndWait();
+                            //                        TODO: update UI
+                        });
 
                     }
-
-                    latestNum = currentNum;
                     LocalDateTime finish = LocalDateTime.now();
                     LOGGER.debug("-> " + start.until(finish, ChronoUnit.SECONDS) + "s");
                 } catch (Exception e) {
@@ -92,12 +142,15 @@ public class App extends Application {
 
             sessionTimer.addEventListener(SessionTimer.EventType.SESSION_START, () -> {
                 sessionData.clear();
-                largetQttyData.clear();
+                largestQttyData = null;
             });
 
             sessionTimer.addEventListener(SessionTimer.EventType.HALF_START, () -> {
                 try {
-                    webDriver = new ChromeDriver();
+                    ChromeOptions options = new ChromeOptions();
+                    options.setHeadless(true);
+                    webDriver = new ChromeDriver(options);
+
                     //                webDriver.manage().window().maximize();
 
                     //                TODO Show info in status bar
@@ -146,11 +199,11 @@ public class App extends Application {
             });
 
             sessionTimer.addEventListener(SessionTimer.EventType.SESSION_START, () -> {
-                latestNum = 0;
+                latestNum = DEFAULT_START_NUM;
             });
 
             sessionTimer.addEventListener(SessionTimer.EventType.SESSION_FINISH, () -> {
-                latestNum = 0;
+                latestNum = DEFAULT_START_NUM;
             });
 
             sessionTimer.addEventListener(SessionTimer.EventType.HALF_PERIODIC_CHECK, () -> {
@@ -214,8 +267,10 @@ public class App extends Application {
     }
 
     private Scene generateMainScene(Stage stage) {
-//        Test notification
-//        TrayNotification notification = new TrayNotification("Update", String.valueOf(sessionData.size()), Notifications.SUCCESS);
+//        TrayNotification notification = new TrayNotification(
+//                "Largest qtty",
+//                "",
+//                Notifications.INFORMATION);
 //        notification.setAnimation(Animations.POPUP);
 //        notification.showAndWait();
 
