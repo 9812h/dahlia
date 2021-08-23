@@ -1,9 +1,5 @@
 package com.tmh.dahlia;
 
-import com.github.plushaze.traynotification.animations.Animations;
-import com.github.plushaze.traynotification.notification.Notification;
-import com.github.plushaze.traynotification.notification.Notifications;
-import com.github.plushaze.traynotification.notification.TrayNotification;
 import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.scene.Node;
@@ -15,6 +11,7 @@ import javafx.scene.layout.*;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
 
+import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.openqa.selenium.By;
@@ -52,6 +49,9 @@ public class App extends Application {
     private final ArrayList<ArrayList<String>> sessionData = new ArrayList<>();
     private final ArrayList<Object> largetQttyData = new ArrayList<>();
 
+    private boolean periodCheckFlag = true;
+    private int latestNum = 0;
+
     @Override
     public void start(Stage stage) {
         try {
@@ -62,59 +62,30 @@ public class App extends Application {
             System.setProperty("webdriver.chrome.driver", (String) settings.get(SettingKeys.DRIVER_PATH));
 
             SessionTimer.EventListener periodicListener = () -> {
-                LOGGER.debug("PERIODIC CHECK!");
+                if (periodCheckFlag) periodCheckFlag = false; else return;
+                try {
+                    LocalDateTime start = LocalDateTime.now();
+                    LOGGER.debug("periodic check");
+                    webDriver.findElement(By.xpath("//div[@data-qtip='Câp nhật']")).click();
 
-                webDriver.findElement(By.id("tool-1075")).click();
+                    new WebDriverWait(webDriver, 100)
+                            .until(ExpectedConditions.presenceOfElementLocated(By.xpath("//table[contains(@class,'SPTable') and contains(@id,'tblDealHist')]")));
 
-//                webDriver.navigate().refresh();
+                    String historyTbXpath = "//table[contains(@class,'SPTable') and contains(@id,'tblDealHist')]";
+                    int currentNum = Integer.parseInt(webDriver.findElement(By.xpath(historyTbXpath + "//tr[1]//td[1]")).getText());
 
-//                (new WebDriverWait(webDriver, 100)
-//                        .until(ExpectedConditions.elementToBeClickable(By.id("combobox-1013-inputEl"))))
-//                .sendKeys("VN30F1M");
-//
-//                new WebDriverWait(webDriver, 100)
-//                        .until((ExpectedCondition<Boolean>) driver -> {
-//                            WebElement button1015 = driver.findElement(By.id("button-1015"));
-//                            String elementClasses = button1015.getAttribute("class");
-//                            return !elementClasses.contains("x-item-disabled") && !elementClasses.contains("x-btn-disabled");
-//                        });
-//
-//
-//                webDriver.findElement(By.id("btnDetail")).click();
-//
+                    for (int i = 1; i <= currentNum - latestNum; ++i) {
 
-                LocalDateTime start = LocalDateTime.now();
+                    }
 
-//                List<WebElement> dataRows = (new WebDriverWait(webDriver, 100)
-//                        .until(ExpectedConditions.presenceOfElementLocated(By.id("tblDealHist0"))))
-//                .findElements(By.tagName("tr"));
-
-                new WebDriverWait(webDriver, 100)
-                        .until(ExpectedConditions.presenceOfElementLocated(By.id("tblDealHist0")));
-
-
-//                int numberOfDiffRows = dataRows.size() - sessionData.size();
-//
-//                if (numberOfDiffRows > 0) {
-//                    LOGGER.debug("New!");
-//                    for (int i = sessionData.size(); i < dataRows.size(); i++) {
-//                        sessionData.add(new ArrayList<>());
-//                    }
-//                }
-
-                LocalDateTime finish = LocalDateTime.now();
-
-                LOGGER.debug(start.until(finish, ChronoUnit.SECONDS));
-
-
-
-//                Platform.runLater(() -> {
-//                    TrayNotification notification = new TrayNotification("Update", String.valueOf(sessionData.size()), Notifications.SUCCESS);
-//                    notification.setAnimation(Animations.POPUP);
-//                    notification.showAndWait();
-//                });
-
-//                for (WebElement row : dataRows) LOGGER.debug(row.getText());
+                    latestNum = currentNum;
+                    LocalDateTime finish = LocalDateTime.now();
+                    LOGGER.debug("-> " + start.until(finish, ChronoUnit.SECONDS) + "s");
+                } catch (Exception e) {
+                    LOGGER.debug(ExceptionUtils.getStackTrace(e));
+                } finally {
+                    periodCheckFlag = true;
+                }
             };
 
             sessionTimer = new SessionTimer((Long) settings.get(SettingKeys.UPDATE_TIME));
@@ -125,36 +96,39 @@ public class App extends Application {
             });
 
             sessionTimer.addEventListener(SessionTimer.EventType.HALF_START, () -> {
-                webDriver = new ChromeDriver();
+                try {
+                    webDriver = new ChromeDriver();
+                    //                webDriver.manage().window().maximize();
+
+                    //                TODO Show info in status bar
+                    webDriver.navigate().to("https://quotes.vcbs.com.vn/a/mix.html");
+
+                    (new WebDriverWait(webDriver, 100)
+                            .until(ExpectedConditions.elementToBeClickable(By.id("combobox-1009-inputEl"))))
+                            .sendKeys("VN30F1M");
+
+                    new WebDriverWait(webDriver, 100)
+                            .until((ExpectedCondition<Boolean>) driver -> {
+                                WebElement button1015 = driver.findElement(By.id("button-1011"));
+                                String elementClasses = button1015.getAttribute("class");
+                                return !elementClasses.contains("x-item-disabled") && !elementClasses.contains("x-btn-disabled");
+                            });
 
 
-//                TODO Show info in status bar
-                webDriver.navigate().to("https://quotes.vcbs.com.vn/a/mix.html");
+                    webDriver.findElement(By.id("btnDetail")).click();
 
-                (new WebDriverWait(webDriver, 100)
-                        .until(ExpectedConditions.elementToBeClickable(By.id("combobox-1013-inputEl"))))
-                        .sendKeys("VN30F1M");
+                    new WebDriverWait(webDriver, 100)
+                            .until(ExpectedConditions.presenceOfElementLocated(By.xpath("//*[@data-ref='textEl']")));
 
-                new WebDriverWait(webDriver, 100)
-                        .until((ExpectedCondition<Boolean>) driver -> {
-                            WebElement button1015 = driver.findElement(By.id("button-1015"));
-                            String elementClasses = button1015.getAttribute("class");
-                            return !elementClasses.contains("x-item-disabled") && !elementClasses.contains("x-btn-disabled");
-                        });
+                    WebElement tb = webDriver.findElement(By.xpath("//div[contains(@class, 'x-window x-layer')]"));
 
+                    //                WebElement tr = tb.findElement(By.tagName("tr"));
+                    //                LOGGER.debug(tr.getText());
 
-                webDriver.findElement(By.id("btnDetail")).click();
-
-                new WebDriverWait(webDriver, 100)
-                        .until(ExpectedConditions.presenceOfElementLocated(By.id("tblDealHist0")));
-
-                WebElement tb = webDriver.findElement(By.id("tblDealHist0"));
-                WebElement tr = tb.findElement(By.className("tr"));
-                LOGGER.debug(tr.getText());
-                tb.
-
-
-                sessionTimer.addEventListener(SessionTimer.EventType.HALF_PERIODIC_CHECK, periodicListener);
+                    sessionTimer.addEventListener(SessionTimer.EventType.HALF_PERIODIC_CHECK, periodicListener);
+                } catch (Exception e) {
+                    LOGGER.debug(ExceptionUtils.getStackTrace(e));
+                }
             });
 
             sessionTimer.addEventListener(SessionTimer.EventType.HALF_FINISH, () -> {
@@ -172,11 +146,11 @@ public class App extends Application {
             });
 
             sessionTimer.addEventListener(SessionTimer.EventType.SESSION_START, () -> {
-
+                latestNum = 0;
             });
 
             sessionTimer.addEventListener(SessionTimer.EventType.SESSION_FINISH, () -> {
-
+                latestNum = 0;
             });
 
             sessionTimer.addEventListener(SessionTimer.EventType.HALF_PERIODIC_CHECK, () -> {
@@ -214,7 +188,7 @@ public class App extends Application {
             scanner.close();
         } catch (Exception e) {
             settings.put(SettingKeys.DRIVER_PATH, "");
-            settings.put(SettingKeys.UPDATE_TIME, Long.valueOf(5000));
+            settings.put(SettingKeys.UPDATE_TIME, 5000);
         }
     }
 
@@ -240,6 +214,10 @@ public class App extends Application {
     }
 
     private Scene generateMainScene(Stage stage) {
+//        Test notification
+//        TrayNotification notification = new TrayNotification("Update", String.valueOf(sessionData.size()), Notifications.SUCCESS);
+//        notification.setAnimation(Animations.POPUP);
+//        notification.showAndWait();
 
         HBox topControls = new HBox();
 
@@ -302,9 +280,12 @@ public class App extends Application {
         TextField textFieldUpdateTime = new TextField();
         textFieldUpdateTime.setText(((Long) settings.get(SettingKeys.UPDATE_TIME)).toString());
 
+//        TwoStateButton showHideBrowser =
+
         Node driverPathRow = generateSettingRow("Chrome driver", new Node[]{labelDriverPath});
         Node browseDriverRow = generateSettingRow(null, new Node[]{buttonBrowseDriver});
         Node updateTimeRow = generateSettingRow("Update time (millisec)", new Node[]{textFieldUpdateTime});
+//        Node Show  = generateSettingRow("Hide browser window", new Node[]{textFieldUpdateTime});
 
         Pane spacer = new Pane();
         VBox.setVgrow(spacer, Priority.ALWAYS);
@@ -341,6 +322,5 @@ public class App extends Application {
         for (Node control : controls) { row.getChildren().add(control); }
         return row;
     }
-
 
 }
